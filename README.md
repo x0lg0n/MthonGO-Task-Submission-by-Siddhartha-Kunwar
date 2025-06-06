@@ -20,69 +20,46 @@ A RESTful API for managing educational chapters with MongoDB, Redis caching, and
 
 ## API Endpoints
 
-### GET /api/v1/chapters
+### Chapters
 
-Fetch all chapters with filtering and pagination.
+1. **GET /api/v1/chapters**
+   - Description: Fetch all chapters with optional filtering and pagination
+   - Query Parameters:
+     - `class`: Filter by class (e.g., "Class 11")
+     - `unit`: Filter by unit
+     - `status`: Filter by status
+     - `weakChapters`: Filter weak chapters (true/false)
+     - `subject`: Filter by subject
+     - `page`: Page number (default: 1)
+     - `limit`: Number of items per page (default: 10)
+   - Response: JSON object with total count, page info, and chapters array
 
-**Query Parameters:**
-- `class`: Filter by class
-- `unit`: Filter by unit
-- `status`: Filter by status
-- `weakChapters`: Filter weak chapters (true/false)
-- `subject`: Filter by subject
-- `page`: Page number (default: 1)
-- `limit`: Results per page (default: 10)
+2. **GET /api/v1/chapters/:id**
+   - Description: Fetch a specific chapter by ID
+   - Response: JSON object with chapter details
 
-**Response:**
-```json
-{
-  "total": 100,
-  "page": 1,
-  "limit": 10,
-  "chapters": [...]
-}
-```
+3. **POST /api/v1/chapters**
+   - Description: Upload chapters (admin only)
+   - Authentication: Admin token required in Authorization header
+   - Request: Multipart form with file field containing JSON array of chapters
+   - Response: JSON object with upload status
 
-### GET /api/v1/chapters/:id
+4. **GET /api/v1/chapters/user-stats**
+   - Description: Get user-specific chapter statistics
+   - Authentication: JWT token required in Authorization header
+   - Response: JSON object with user statistics
 
-Fetch a specific chapter by ID.
+### Authentication
 
-**Response:**
-```json
-{
-  "id": "...",
-  "subject": "Physics",
-  "chapter": "Mechanics",
-  "class": "11",
-  "unit": "1",
-  "yearWiseQuestionCount": {...},
-  "questionSolved": 45,
-  "status": "completed",
-  "isWeakChapter": false,
-  "createdAt": "...",
-  "updatedAt": "..."
-}
-```
+1. **POST /api/v1/auth/login**
+   - Description: Login and get JWT token
+   - Request Body: `{ "username": "admin", "password": "password" }`
+   - Response: `{ "success": true, "token": "your-jwt-token" }`
 
-### POST /api/v1/chapters
-
-Upload chapters (admin only).
-
-**Headers:**
-- `Authorization`: Bearer [ADMIN_TOKEN]
-
-**Body:**
-- `file`: JSON file containing an array of chapter objects
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Chapters processed",
-  "uploaded": 10,
-  "failed": [...]
-}
-```
+2. **GET /api/v1/auth/verify**
+   - Description: Verify JWT token
+   - Authentication: JWT token required in Authorization header
+   - Response: `{ "success": true, "user": { "id": 1, "username": "admin", "role": "admin" } }`
 
 ## Setup and Installation
 
@@ -106,6 +83,68 @@ Upload chapters (admin only).
    npm run dev
    ```
 
+## Testing with Mock Data
+
+This project includes several tools to test the API with the provided mock data:
+
+### 1. Using the Node.js Test Script
+
+Run the test script to automatically test all API endpoints with the mock data:
+
+```bash
+# First install the required dependencies
+npm install axios form-data
+
+# Then run the test script
+node test-api.js
+```
+
+This script will:
+- Upload the mock data to the API
+- Test fetching all chapters
+- Test fetching chapters with filters
+- Test fetching a specific chapter by ID
+
+### 2. Using Postman
+
+Import the provided Postman collection:
+
+1. Open Postman
+2. Click on "Import" and select the `MathonGO-API.postman_collection.json` file
+3. Set the collection variables:
+   - `baseUrl`: `http://localhost:3000/api/v1`
+   - `adminToken`: Your admin token from the .env file
+4. Use the collection to test the API endpoints
+
+### 3. Using the Web Interface
+
+A simple HTML-based API tester is included:
+
+1. Start the server with `npm run dev`
+2. Open the `api-tester.html` file in your browser
+3. Use the interface to test the different API endpoints
+
+### 4. Using cURL
+
+You can also test the API using cURL commands:
+
+```bash
+# Get all chapters
+curl http://localhost:3000/api/v1/chapters
+
+# Get chapters with filters
+curl "http://localhost:3000/api/v1/chapters?class=Class%2011&subject=Physics&weakChapters=true"
+
+# Get a specific chapter by ID
+curl http://localhost:3000/api/v1/chapters/[chapter-id]
+
+# Upload chapters (replace YOUR_ADMIN_TOKEN with your actual token)
+curl -X POST \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -F "file=@mockdata.txt" \
+  http://localhost:3000/api/v1/chapters
+```
+
 ## Security Considerations
 
 - The API uses a simple token-based authentication for admin endpoints
@@ -124,3 +163,41 @@ Upload chapters (admin only).
 - Add more comprehensive error handling and logging
 - Implement unit and integration tests
 - Add Swagger documentation for API endpoints
+
+
+## Authentication
+
+The application supports two types of authentication:
+
+### 1. JWT Authentication
+
+JSON Web Token (JWT) authentication is used for regular user authentication.
+
+- **Login Endpoint**: `POST /api/v1/auth/login`
+  - Request body: `{ "username": "admin", "password": "password" }`
+  - Response: `{ "success": true, "token": "your-jwt-token" }`
+
+- **Verify Token Endpoint**: `GET /api/v1/auth/verify`
+  - Headers: `Authorization: Bearer your-jwt-token`
+  - Response: `{ "success": true, "user": { "id": 1, "username": "admin", "role": "admin" } }`
+
+### 2. Admin Token Authentication
+
+A simple token-based authentication is used for admin-only endpoints.
+
+- **Admin-Protected Endpoints**: Currently only the chapter upload endpoint
+  - Headers: `Authorization: Bearer your-admin-token`
+  - The admin token is set in the `.env` file as `ADMIN_TOKEN`
+
+### Testing Authentication
+
+A test script is provided to demonstrate how to use both authentication methods:
+
+```bash
+node test-auth.js
+```
+
+This script will:
+1. Attempt to login and get a JWT token
+2. Verify the JWT token
+3. Test accessing an admin-protected endpoint using the admin token

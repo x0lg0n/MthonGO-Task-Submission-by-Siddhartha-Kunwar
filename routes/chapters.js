@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const Chapter = require('../models/Chapters');
 const redisClient = require('../config/redis');
-const auth = require('../middleware/auth');
+const auth = require('../middleware/auth'); // Admin token auth
+const jwtAuth = require('../middleware/jwtAuth'); // JWT auth
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -118,6 +119,30 @@ router.post('/', auth, upload.single('file'), async (req, res) => {
   } catch (error) {
     console.error('Error uploading chapters:', error);
     res.status(500).json({ error: 'Failed to process chapters' });
+  }
+});
+
+// POST /api/v1/chapters/user-stats - Get user-specific chapter statistics (JWT protected)
+router.get('/user-stats', jwtAuth, async (req, res) => {
+  try {
+    // This route is protected by JWT authentication
+    // req.user contains the decoded JWT payload
+    
+    // For demonstration purposes, we'll just return some stats
+    // In a real application, you would fetch user-specific data from the database
+    const stats = {
+      userId: req.user.id,
+      username: req.user.username,
+      totalChapters: await Chapter.countDocuments(),
+      weakChapters: await Chapter.countDocuments({ isWeakChapter: true }),
+      completedChapters: await Chapter.countDocuments({ status: 'Completed' }),
+      timestamp: new Date()
+    };
+    
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    res.status(500).json({ error: 'Failed to fetch user statistics' });
   }
 });
 
